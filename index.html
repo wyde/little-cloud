@@ -1,0 +1,228 @@
+
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Gamedev Canvas Workshop</title>
+        <style>
+* { padding: 0; margin: 0; }
+canvas { background: #eee; display: block; margin: 0 auto; }
+        </style>
+    </head>
+    <body>
+
+        <canvas id="myCanvas" width="800" height="600"></canvas>
+
+        <script>
+var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+var cloud_w = 80;
+var cloud_h = 40;
+var cloudColCnt = 4;
+var cloudRowCnt = 3;
+var clouds = [];
+var timeFlag = true;
+var gameFlag = false;
+var center_cloud_x = canvas.width / 2 - cloud_w / 2;
+var center_cloud_y = 320;
+
+function shuffle(array) {
+    var counter = array.length;
+    while (counter > 0) {
+        var index = Math.floor(Math.random() * counter);
+        counter--;
+        var temp = array[counter];
+        array[counter] = array[index];
+        array[index] = temp;
+    }
+    return array;
+}
+
+var seqArr = [];
+for (i = 0; i < cloudColCnt * cloudRowCnt; i++) {
+    seqArr[i] = i + 1;
+}
+
+var shuffleArr = shuffle(seqArr);
+for (i = 0; i < cloudColCnt; i++) {
+    clouds[i] = [];
+    for (j = 0; j < cloudRowCnt; j++) {
+        clouds[i][j] = {
+            x: 150 * (1 + i),
+            y: 150 * (1 + j) - 20,
+            status: 1,
+            n: shuffleArr[i * cloudRowCnt + j]
+        }; //assign location
+    }
+}
+
+
+var correct_order = 1;
+
+
+function resetGame(msg) {
+    window.setTimeout(function() {
+        alert(msg);
+        timeFlag = false;
+        document.location.reload();
+    }, 100);
+}
+
+document.addEventListener("click", clickHandler, false);
+
+function clickHandler(e) {
+    var relative_x = e.pageX - canvas.offsetLeft,
+    relative_y = e.pageY - canvas.offsetTop;
+    if (gameFlag) {
+        for (i = 0; i < cloudColCnt; i++) {
+            for (j = 0; j < cloudRowCnt; j++) {
+                var cd = clouds[i][j];
+                if (relative_x > cd.x - 20 && relative_x < cd.x + cloud_w + 20 &&
+                        relative_y > cd.y - 30 && relative_y < cd.y + cloud_h) {
+                    if (cd.n == correct_order) {
+                        cd.status = 0;
+                        if (correct_order == 12) {
+                            resetGame('恭喜，你贏了！ 費時 ' + time_elapsed / 10 + ' 秒');
+                        } else {
+                            correct_order++;
+                        }
+                    } else {
+                        if (cd.status == 1) {
+                            cd.status = 2;
+                            resetGame('加油！！再來一次');
+                        }
+                    }
+                }
+            }
+            if (relative_x > canvas.width / 2 - 64 && relative_x < canvas.width / 2 + 64 &&
+                    relative_y > canvas.height - 70 && relative_y < canvas.height - 40) {
+                document.location.reload();
+            }
+        }
+    } else {
+
+        if (relative_x > center_cloud_x - 20 && center_cloud_x + cloud_w + 20 &&
+                relative_y > center_cloud_y - 30 && relative_y < center_cloud_y + cloud_h) {
+            gameFlag = true;
+
+        }
+    }
+}
+
+function drawCloud(cloud_x, cloud_y, cloud_n, cloud_color) {
+    ctx.beginPath();
+    var right_bubble_r = 18; // < cloud_w
+    var left_bubble_r = 28; // < cloud_w
+    ctx.rect(cloud_x, cloud_y, cloud_w, cloud_h);
+    ctx.moveTo(cloud_x + cloud_w, cloud_y + cloud_h / 2);
+    ctx.arc(cloud_x + cloud_w, cloud_y + cloud_h / 2, cloud_h / 2, -Math.PI * 0.5, Math.PI * 0.5, false); //clockwise
+    ctx.moveTo(cloud_x + cloud_w - right_bubble_r, cloud_y);
+    ctx.arc(cloud_x + cloud_w - right_bubble_r, cloud_y, right_bubble_r, 0, Math.PI, true); //counter-clockwise
+    ctx.moveTo(cloud_x + left_bubble_r, cloud_y);
+    ctx.arc(cloud_x + left_bubble_r, cloud_y, left_bubble_r, 0, Math.PI, true); //counter-clockwise
+    ctx.moveTo(cloud_x, cloud_y + cloud_h / 2);
+    ctx.arc(cloud_x, cloud_y + cloud_h / 2, cloud_h / 2, Math.PI * 0.5, Math.PI * 1.5, false);
+    ctx.fillStyle = cloud_color;
+    ctx.fill();
+    ctx.closePath();
+
+
+    ctx.fillStyle = "#eee";
+    ctx.textAlign = "center"
+        if (cloud_n < 10) {
+            ctx.font = "32px Arial";
+            ctx.fillText(" " + cloud_n, cloud_x + 30, cloud_y + cloud_h - 10);
+        } else if (cloud_n >= 10) {
+            ctx.font = "32px Arial";
+            ctx.fillText(cloud_n, cloud_x + 40, cloud_y + cloud_h - 10);
+        } else {
+            ctx.font = "24px Arial";
+            ctx.fillText(cloud_n, canvas.width / 2, cloud_y + cloud_h - 10);
+        }
+}
+
+
+function drawClouds() {
+    for (i = 0; i < cloudColCnt; i++) {
+        for (j = 0; j < cloudRowCnt; j++) {
+            var cd = clouds[i][j];
+            if (cd.status == 1) {
+                drawCloud(cd.x, cd.y, cd.n, "#0095DD");
+            } else if (cd.status == 2) {
+                drawCloud(cd.x, cd.y, cd.n, "#FF0000");
+            }
+        }
+    }
+}
+
+function drawReset() {
+    ctx.font = "32px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.textAlign = "center";
+    ctx.fillText("重新開始", canvas.width / 2, canvas.height - 40);
+}
+
+var time_elapsed = 0;
+
+function drawTimeElapsed() {
+
+    ctx.font = "32px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.textAlign = "start"
+        ctx.fillText("時間：", 150, 60);
+    ctx.fillText("秒", 360, 60)
+        if (timeFlag) {
+            ctx.textAlign = "end";
+            if (time_elapsed % 10 == 0){
+                ctx.fillText(time_elapsed/10 + ".0", 350, 60);
+            }else{
+                ctx.fillText(time_elapsed/10, 350, 60);
+            }
+        }
+}
+
+function drawRule() {
+    ctx.font = "32px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.textAlign = "center";
+    ctx.fillText("數字疊疊樂", canvas.width / 2, 80);
+    ctx.fillText("規則：請由遞增順序點選數字雲", canvas.width / 2, 160);
+    ctx.fillText("適用年齡 5～10 歲孩童", canvas.width / 2, 540);
+    drawCloud(center_cloud_x, center_cloud_y, "點我開始", "#0095DD");
+}
+
+
+function draw() {
+    if (gameFlag) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawClouds();
+        drawReset();
+        drawTimeElapsed();
+    } else {
+        drawRule();
+    }
+    requestAnimationFrame(draw);
+}
+
+draw();
+
+var timeUpFlag = false;
+
+window.setInterval(function() {
+    if (time_elapsed > 9999 && !timeUpFlag) {
+        resetGame('時間到了，再來一次吧！');
+        timeUpFlag = true;
+    } else {
+        if (gameFlag) {
+            time_elapsed++;
+        }
+    }
+}, 100);
+
+
+        </script>
+
+    </body>
+</html>
+
